@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,11 +27,14 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 import com.github.xlogger.common.XLoggerData;
 import com.github.xlogger.server.codec.XLoggerDecoder;
+import com.github.xlogger.server.store.StorageFactory;
 
 public class XLoggerServer {
     private static final Logger logger = Logger.getLogger(LoggerHandler.class.getName());
 
     private static final ConcurrentMap<Channel, Long> connectionMap = new ConcurrentHashMap<Channel, Long>();
+    
+    private static final ConcurrentLinkedQueue<XLoggerData> unWroteQueue = new ConcurrentLinkedQueue<XLoggerData>();
     
 	private static class LoggerHandler extends SimpleChannelUpstreamHandler {
 		AtomicInteger count = new AtomicInteger();
@@ -50,6 +54,15 @@ public class XLoggerServer {
 //	        e.getChannel().write(e.getMessage());
 	    	if (e.getMessage() instanceof XLoggerData) {
 	    		final XLoggerData data = (XLoggerData)e.getMessage();
+	    		try {
+					StorageFactory.saveLog(data);
+				} catch (Exception e1) {
+					e1.printStackTrace();
+					unWroteQueue.add(data);
+					if (unWroteQueue.size() > 100) {
+						logger.warning("too many messages not wrote!!!");
+					}
+				}
 	    		if (count.incrementAndGet() % 10000 == 0)
 	    			logger.info(data.getTabName() + " time = " + data.getEventId());
 	    	}
@@ -58,8 +71,7 @@ public class XLoggerServer {
 	    @Override
 	    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
 	        // Close the connection when an exception is raised.
-	        logger.log(Level.WARNING, "Unexpected exception from downstream.",
-	                e.getCause());
+	        logger.log(Level.WARNING, "Unexpected exception from downstream.", e.getCause());
 	        e.getChannel().close();
 	    }
 	}
@@ -113,6 +125,14 @@ public class XLoggerServer {
 	}
 	
 	public static void main(String[] args) {
-		start("localhost", (short)4000);
+		if (args.length < 3) {
+			System.err.println("You have to configurate the jdbcDriver, url, user, passwd");
+			return;
+		} else {
+			if (StorageFactory.setupJDBC(args[0], args[1], args[2], args[3])) {
+				System.out.println("Connect the database is ok");
+				start("localhost", (short)4000);
+			}
+		}
 	}
 }

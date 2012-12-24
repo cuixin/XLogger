@@ -1,7 +1,5 @@
 package com.github.xlogger;
 
-import static org.junit.Assert.*;
-
 import org.junit.Test;
 
 public class XLoggerTest {
@@ -12,7 +10,7 @@ public class XLoggerTest {
 
 		for (int j = 0; j < 10000; j++) {
 			for (int i = 0; i < 10000; i++)
-				XLogger.log("Test", "1111", 2323);
+				XLogger.log("Test", "1111", i);
 			try {
 				Thread.sleep(5000);
 			} catch (InterruptedException e) {

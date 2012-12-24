@@ -98,10 +98,11 @@ public class XLoggerData {
 	
 	public String toSQL() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("INSERT INTO ").append(tabName).append(" VALUES(");
-		for (int i = 0; i < args.length; i++)
-			sb.append("?, ");
-		sb.append("?, ?)");
+		sb.append("insert delayed `").append(tabName).append("` values(null, null");
+		for (int i = 0; i < args.length; i++) {
+			sb.append(",?");
+		}
+		sb.append(")");
 		return sb.toString();
 	}
 }

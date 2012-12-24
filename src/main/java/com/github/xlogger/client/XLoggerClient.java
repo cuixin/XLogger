@@ -178,6 +178,7 @@ public class XLoggerClient implements Runnable {
 			}
 			handler.flushData();
 		}
+		onShutdown();
 	}
 
 }
